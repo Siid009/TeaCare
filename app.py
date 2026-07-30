@@ -1,29 +1,35 @@
 
 from flask import Flask, render_template, request, jsonify
-import tensorflow as tf
-import numpy as np
 import os
-from tensorflow.keras.preprocessing import image
-from tensorflow.keras.applications.inception_v3 import preprocess_input
 import requests
 from dotenv import load_dotenv
+from PIL import Image
 
 load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
 
-
 app = Flask(__name__)
 
+TF_AVAILABLE = False
+model = None
 
+try:
+    import tensorflow as tf
+    from tensorflow.keras.preprocessing import image
+    from tensorflow.keras.applications.inception_v3 import preprocess_input
+    from tensorflow.keras.models import Model
+    from tensorflow.keras.layers import *
+    from tensorflow.keras import backend as K
+    TF_AVAILABLE = True
+except ModuleNotFoundError:
+    tf = None
+    image = None
+    preprocess_input = None
+    Model = None
+    np = None
+    print("TensorFlow is not available; prediction is disabled.")
 
-
-
-
-import tensorflow as tf
-from tensorflow.keras.models import Model, load_model
-from tensorflow.keras.layers import *
-from tensorflow.keras import backend as K
 
 # -------------------- CBAM BLOCK --------------------
 def cbam_block(feature_map, ratio=8):
@@ -112,9 +118,14 @@ def GoogLeNet_CBAM(input_shape=(224,224,3), num_classes=6):
 
 
 
-# Load model
-model = GoogLeNet_CBAM()
-model.load_weights("best_attention_model.h5")
+# Load model when TensorFlow is available
+if TF_AVAILABLE:
+    try:
+        model = GoogLeNet_CBAM()
+        model.load_weights("best_attention_model.h5")
+    except Exception as e:
+        print("TensorFlow model failed to load:", e)
+        model = None
 
 # Example class labels (change according to your dataset)
 idx_to_class = {
@@ -192,6 +203,53 @@ def predict_image(img_path):
     return label, confidence
 
 
+def generate_leaf_visuals(img_path):
+    """
+    Build additional visual outputs for UI:
+    - masked image: leaf foreground isolated
+    - highlighted image: likely diseased zones emphasized
+    """
+    base = os.path.splitext(os.path.basename(img_path))[0]
+    masked_name = f"{base}_masked.png"
+    highlighted_name = f"{base}_highlighted.png"
+    masked_path = os.path.join(UPLOAD_FOLDER, masked_name)
+    highlighted_path = os.path.join(UPLOAD_FOLDER, highlighted_name)
+
+    img = Image.open(img_path).convert("RGB")
+    arr = np.array(img)
+    r = arr[:, :, 0].astype(np.float32)
+    g = arr[:, :, 1].astype(np.float32)
+    b = arr[:, :, 2].astype(np.float32)
+
+    # Basic leaf segmentation: green-dominant pixels.
+    leaf_mask = ((g > r * 0.9) & (g > b * 0.9) & (g > 40)).astype(np.uint8)
+    if leaf_mask.mean() < 0.04:
+        # Fallback for difficult lighting/backgrounds.
+        gray = (0.299 * r + 0.587 * g + 0.114 * b)
+        threshold = np.percentile(gray, 45)
+        leaf_mask = (gray > threshold).astype(np.uint8)
+
+    masked = arr.copy()
+    masked[leaf_mask == 0] = np.array([247, 240, 240], dtype=np.uint8)
+    Image.fromarray(masked).save(masked_path)
+
+    # Likely disease region: brown/red/dark irregular areas within leaf.
+    disease_mask = (
+        ((r > g * 1.12) & (r > b * 1.05) & (r > 65)) |
+        ((r < 120) & (g < 120) & (b < 120))
+    ) & (leaf_mask == 1)
+
+    highlighted = arr.copy()
+    highlight_color = np.array([242, 181, 11], dtype=np.uint8)
+    alpha = 0.55
+    highlighted[disease_mask] = (
+        (1 - alpha) * highlighted[disease_mask] + alpha * highlight_color
+    ).astype(np.uint8)
+    Image.fromarray(highlighted).save(highlighted_path)
+
+    return masked_path, highlighted_path
+
+
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -199,6 +257,13 @@ def home():
 @app.route("/predict", methods=["GET", "POST"])
 def predict():
     if request.method == "POST":
+        if not TF_AVAILABLE or model is None:
+            error = (
+                "Prediction is currently unavailable because TensorFlow is not installed "
+                "or the model failed to load. Install TensorFlow and restart the app."
+            )
+            return render_template("predict.html", error=error)
+
         file = request.files["file"]
         if file:
             filepath = os.path.join(UPLOAD_FOLDER, file.filename)
@@ -206,13 +271,16 @@ def predict():
 
             label, confidence = predict_image(filepath)
             severity, remedy = get_smart_remedy(label, confidence)
+            masked_path, highlighted_path = generate_leaf_visuals(filepath)
 
             return render_template("predict.html",
                                    prediction=label,
                                    confidence=round(confidence, 2),
                                    severity=severity,
                                    remedy=remedy,
-                                   image_path=filepath)
+                                   image_path=filepath,
+                                   masked_path=masked_path,
+                                   highlighted_path=highlighted_path)
 
     return render_template("predict.html")
 
@@ -231,49 +299,153 @@ def weather():
         data = request.json
         lat = data.get("lat")
         lon = data.get("lon")
+        if lat is None or lon is None:
+            return jsonify({"error": "Missing coordinates"}), 400
 
-        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric"
+        url = (
+            "https://api.open-meteo.com/v1/forecast"
+            f"?latitude={lat}&longitude={lon}"
+            "&current=temperature_2m,relative_humidity_2m,apparent_temperature,"
+            "precipitation,weather_code,wind_speed_10m"
+            "&daily=weather_code,temperature_2m_max,temperature_2m_min,"
+            "precipitation_probability_max,uv_index_max,wind_speed_10m_max,"
+            "relative_humidity_2m_mean"
+            "&forecast_days=10&timezone=auto"
+        )
 
-        response = requests.get(url)
+        response = requests.get(url, timeout=15)
         res = response.json()
-
-        if response.status_code != 200 or "main" not in res:
+        if response.status_code != 200 or "current" not in res or "daily" not in res:
             return jsonify({
                 "temp": "N/A",
                 "humidity": "N/A",
                 "condition": "API Error",
                 "risk": "⚠️ Unable to detect risk",
-                "advice": "Weather data unavailable"
+                "advice": "Weather data unavailable",
+                "forecast": []
             })
 
-        temp = res["main"]["temp"]
-        humidity = res["main"]["humidity"]
-        condition = res["weather"][0]["main"]
+        current = res["current"]
+        daily = res["daily"]
 
-        # 🌿 Risk Logic
-        if humidity > 70 and "Rain" in condition:
+        temp = float(current.get("temperature_2m", 0))
+        humidity = float(current.get("relative_humidity_2m", 0))
+        wind = float(current.get("wind_speed_10m", 0))
+        weather_code = int(current.get("weather_code", 0))
+        uv_today = float(daily.get("uv_index_max", [0])[0] or 0)
+        rain_prob_today = int(daily.get("precipitation_probability_max", [0])[0] or 0)
+
+        code_map = {
+            0: "Clear",
+            1: "Mainly Clear",
+            2: "Partly Cloudy",
+            3: "Cloudy",
+            45: "Fog",
+            48: "Fog",
+            51: "Drizzle",
+            53: "Drizzle",
+            55: "Drizzle",
+            56: "Freezing Drizzle",
+            57: "Freezing Drizzle",
+            61: "Rain",
+            63: "Rain",
+            65: "Heavy Rain",
+            66: "Freezing Rain",
+            67: "Freezing Rain",
+            71: "Snow",
+            73: "Snow",
+            75: "Snow",
+            80: "Rain Showers",
+            81: "Rain Showers",
+            82: "Heavy Showers",
+            95: "Thunderstorm",
+            96: "Thunderstorm",
+            99: "Thunderstorm",
+        }
+        condition = code_map.get(weather_code, "Moderate")
+
+        # Disease risk
+        if humidity >= 80 or rain_prob_today >= 70:
+            disease_risk = "High"
             risk = "⚠️ High fungal disease risk"
-        elif humidity > 60:
+        elif humidity >= 65 or rain_prob_today >= 45:
+            disease_risk = "Moderate"
             risk = "⚠️ Moderate disease risk"
         else:
+            disease_risk = "Low"
             risk = "✅ Low disease risk"
 
-        # 🌱 Tea Recommendation Logic
-        if 18 <= temp <= 30 and humidity > 60:
-            advice = "🌱 Ideal climate for tea plantation. Maintain drainage and pruning."
-        elif temp > 30:
-            advice = "🔥 Too hot! Provide shade and irrigation."
-        elif temp < 15:
-            advice = "❄️ Too cold! Growth may slow. Protect plants."
+        # Crop impact and irrigation
+        if temp > 32:
+            crop_impact = "Heat stress likely. Tender leaves may scorch during peak sun."
+            irrigation = "Irrigate early morning and add temporary shade near young plants."
+        elif temp < 14:
+            crop_impact = "Cool stress may reduce growth speed and flushing."
+            irrigation = "Keep soil lightly moist; avoid overwatering in cold periods."
         else:
-            advice = "🌿 Moderate conditions. Monitor plant health regularly."
+            crop_impact = "Temperature range is acceptable for tea growth."
+            irrigation = "Maintain moderate moisture and avoid waterlogging."
+
+        if rain_prob_today >= 60:
+            rain_alert = "Rain alert active: postpone foliar spray and improve drainage."
+        else:
+            rain_alert = "No strong rain alert: spray windows are relatively safer."
+
+        if wind > 20:
+            spray_safety = "Caution: wind is high for spraying."
+        else:
+            spray_safety = "Spray-safe wind conditions."
+
+        if uv_today >= 8:
+            uv_risk = "High UV: monitor leaf burn risk."
+        elif uv_today >= 5:
+            uv_risk = "Moderate UV: midday stress possible."
+        else:
+            uv_risk = "Low UV stress today."
+
+        advice = (
+            "Use early-morning monitoring and target treatment blocks with highest humidity first."
+        )
+
+        forecast = []
+        dates = daily.get("time", [])
+        d_codes = daily.get("weather_code", [])
+        d_tmax = daily.get("temperature_2m_max", [])
+        d_tmin = daily.get("temperature_2m_min", [])
+        d_rain = daily.get("precipitation_probability_max", [])
+        d_uv = daily.get("uv_index_max", [])
+        d_wind = daily.get("wind_speed_10m_max", [])
+        d_hum = daily.get("relative_humidity_2m_mean", [])
+
+        for i in range(min(10, len(dates))):
+            code_i = int(d_codes[i]) if i < len(d_codes) else 0
+            forecast.append({
+                "date": dates[i],
+                "condition": code_map.get(code_i, "Moderate"),
+                "weather_code": code_i,
+                "temp_max": round(float(d_tmax[i]), 1) if i < len(d_tmax) else None,
+                "temp_min": round(float(d_tmin[i]), 1) if i < len(d_tmin) else None,
+                "rain_probability": int(d_rain[i]) if i < len(d_rain) and d_rain[i] is not None else 0,
+                "uv": round(float(d_uv[i]), 1) if i < len(d_uv) and d_uv[i] is not None else 0,
+                "wind": round(float(d_wind[i]), 1) if i < len(d_wind) and d_wind[i] is not None else 0,
+                "humidity": int(d_hum[i]) if i < len(d_hum) and d_hum[i] is not None else 0
+            })
 
         return jsonify({
-            "temp": f"{temp}°C",
-            "humidity": f"{humidity}%",
+            "temp": round(temp, 1),
+            "humidity": int(humidity),
+            "wind": round(wind, 1),
+            "uv": round(uv_today, 1),
             "condition": condition,
             "risk": risk,
-            "advice": advice
+            "disease_risk": disease_risk,
+            "advice": advice,
+            "crop_impact": crop_impact,
+            "irrigation": irrigation,
+            "rain_alert": rain_alert,
+            "spray_safety": spray_safety,
+            "uv_risk": uv_risk,
+            "forecast": forecast
         })
 
     except Exception as e:
@@ -283,7 +455,8 @@ def weather():
             "humidity": "Error",
             "condition": "Server error",
             "risk": "⚠️ Try again",
-            "advice": "⚠️ No advice available"
+            "advice": "⚠️ No advice available",
+            "forecast": []
         })
 
 if __name__ == "__main__":

@@ -1,177 +1,206 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Prediction</title>
-    <link rel="stylesheet" href="/static/style.css">
+  <meta charset="UTF-8" />
+  <title>Prediction - TeaCare AI</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
 </head>
 <body>
 
-<!-- NAVBAR -->
+<div id="tsparticles"></div>
+<div class="content-shell">
+
 <nav class="navbar">
-    <h2>🌿 TeaCare AI</h2>
-    <ul>
-        <li><a href="/">Home</a></li>
-    </ul>
+  <div class="nav-brand">
+    <span class="brand-icon">🌿</span>
+    <div>
+      <h2>TeaCare AI</h2>
+      <p>Smart Tea Crop Intelligence</p>
+    </div>
+  </div>
+  <ul class="nav-links">
+    <li><a href="/">Home</a></li>
+    <li><a href="/predict">Predict</a></li>
+    <li><a href="/weather-page">Weather Insights</a></li>
+  </ul>
+  <a href="/" class="nav-cta">Back Home</a>
 </nav>
 
-<!-- MAIN CONTAINER -->
-<div class="container">
+<div class="container predict-layout">
 
-    <!-- UPLOAD CARD -->
-    <div class="card upload-card">
-        <h2>📸 Upload Tea Leaf Image</h2>
-
-        <form method="POST" enctype="multipart/form-data">
-            <input type="file" name="file" required>
-            <button type="submit">🔍 Predict Disease</button>
-        </form>
-    </div>
-
-
-
-
-
-
-    {% if prediction %}
-    <!-- RESULT CARD -->
-    <div class="card result-card">
-
-        <!-- TITLE -->
-        <h2 class="result-title">
-            🌿 {{ prediction.replace('_', ' ') }}
-            <span class="severity">({{ severity }})</span>
-        </h2>
-
-        <!-- IMAGE -->
-        <img src="/{{ image_path }}" class="result-img">
-
-        <!-- CONFIDENCE -->
-        <div class="confidence-section">
-            <p>Confidence: <strong>{{ confidence }}%</strong></p>
-            <div class="progress-bar">
-                <div class="progress" style="width: {{ confidence }}%"></div>
-            </div>
-        </div>
-
-        <!-- REMEDY GRID -->
-        <div class="remedy-grid">
-
-            <div class="remedy-box" onclick="openModal('treatment')">
-    <h3>💊 Treatment</h3>
-    <p>{{ remedy.treatment }}</p>
-</div>
-
-<div class="remedy-box" onclick="openModal('organic')">
-    <h3>🌱 Organic</h3>
-    <p>{{ remedy.organic }}</p>
-</div>
-
-<div class="remedy-box" onclick="openModal('chemical')">
-    <h3>🧪 Chemical</h3>
-    <p>{{ remedy.chemical }}</p>
-</div>
-
-<div class="remedy-box" onclick="openModal('recovery')">
-    <h3>⏳ Recovery</h3>
-    <p>{{ remedy.recovery }}</p>
-</div>
-
-        </div>
-
-    </div>
+  <!-- UPLOAD CARD -->
+  <div class="card upload-card centered-upload">
+    <h2>📸 Upload Tea Leaf Image</h2>
+    <p>Upload a clear photo of a tea leaf to analyze it for common diseases and get instant AI-powered guidance.</p>
+    <form method="POST" enctype="multipart/form-data">
+      <input type="file" name="file" accept="image/*" required>
+      <button type="submit" class="btn">🔍 Predict Disease</button>
+    </form>
+    {% if error %}
+      <div class="error-box">
+        <p>{{ error }}</p>
+      </div>
     {% endif %}
-
+  </div>
 </div>
 
-<!-- FOOTER -->
-<footer>
-    <p>🌱 AI Powered Smart Farming | TeaCare AI</p>
-</footer>
+<!-- RESULT CARD -->
+{% if prediction %}
+<div class="container">
+  <div class="card result-card">
+    <h2 class="result-title">
+      🌿 {{ prediction.replace('_', ' ') }}
+      <span class="severity">({{ severity }})</span>
+    </h2>
 
-
-<!-- POPUP MODAL -->
-<div id="modal" class="modal">
-    <div class="modal-content">
-
-        <span class="close" onclick="closeModal()">×</span>
-
-        <h2 id="modalTitle"></h2>
-        <p id="modalText"></p>
-        <img id="modalImg">
-
+    <div class="result-gallery">
+      <div class="result-media">
+        <h4>Uploaded Image</h4>
+        <img src="/{{ image_path }}" class="result-img" alt="Uploaded leaf image">
+      </div>
+      <div class="result-media">
+        <h4>Masked Leaf Image</h4>
+        <img src="/{{ masked_path }}" class="result-img" alt="Masked leaf image">
+      </div>
+      <div class="result-media">
+        <h4>Diseased Part Highlight</h4>
+        <img src="/{{ highlighted_path }}" class="result-img" alt="Highlighted diseased area">
+      </div>
     </div>
+
+    <div class="confidence-section">
+      <p>Confidence: <strong>{{ confidence }}%</strong></p>
+      <div class="progress-bar">
+        <div class="progress" style="width: {{ confidence }}%"></div>
+      </div>
+    </div>
+
+    <div class="insight-grid">
+      <div class="remedy-box risk-box">
+        <h3>📈 Disease Spread Risk</h3>
+        {% if severity == "Severe" %}
+          <p><strong>High Risk</strong> - Immediate isolation and treatment needed to prevent spread.</p>
+        {% elif severity == "Moderate" %}
+          <p><strong>Moderate Risk</strong> - Monitor neighboring leaves and start treatment within 24 hours.</p>
+        {% else %}
+          <p><strong>Low Risk</strong> - Early stage detected. Continue routine monitoring and preventive care.</p>
+        {% endif %}
+      </div>
+
+      <div class="remedy-box">
+        <h3>🧭 Action Plan (Step-by-Step)</h3>
+        <ol class="action-steps">
+          <li>Remove severely affected leaves and keep them away from healthy plants.</li>
+          <li>Apply <strong>{{ remedy.treatment }}</strong> according to dosage and timing guidance.</li>
+          <li>Re-scan nearby plants after 48 hours to verify disease control progress.</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="timeline-box remedy-box">
+      <h3>⏱️ Recovery Timeline</h3>
+      <div class="timeline-track">
+        <div class="timeline-step active">Day 0<br><span>Detected</span></div>
+        <div class="timeline-step active">Day 2<br><span>Action Taken</span></div>
+        <div class="timeline-step {% if severity != 'Severe' %}active{% endif %}">Day 5<br><span>Stabilizing</span></div>
+        <div class="timeline-step {% if severity == 'Mild' %}active{% endif %}">Day 10+<br><span>Recovery</span></div>
+      </div>
+      <p class="timeline-note">Expected recovery window: <strong>{{ remedy.recovery }}</strong></p>
+    </div>
+
+    <div class="solution-toggle remedy-box">
+      <h3>⚖️ Organic vs Chemical Strategy</h3>
+      <div class="toggle-switch" role="tablist" aria-label="Treatment type toggle">
+        <button type="button" class="toggle-btn active" id="organicBtn" data-target="organicPanel">Organic</button>
+        <button type="button" class="toggle-btn" id="chemicalBtn" data-target="chemicalPanel">Chemical</button>
+      </div>
+      <div class="toggle-panel active" id="organicPanel">
+        <p><strong>Organic Solution:</strong> {{ remedy.organic }}</p>
+      </div>
+      <div class="toggle-panel" id="chemicalPanel">
+        <p><strong>Chemical Treatment:</strong> {{ remedy.chemical }}</p>
+      </div>
+    </div>
+
+    <div class="remedy-grid">
+      <div class="remedy-box">
+        <h3>💊 Recommended Treatment</h3>
+        <p>{{ remedy.treatment }}</p>
+      </div>
+
+      <div class="remedy-box">
+        <h3>👨‍🌾 Farmer Tips</h3>
+        <ul class="farmer-tips">
+          <li>Inspect the lower leaf surface every morning for early symptoms.</li>
+          <li>Avoid overhead irrigation in evening hours to reduce fungal risk.</li>
+          <li>Keep tool hygiene strict when moving between tea rows.</li>
+        </ul>
+      </div>
+
+      <div class="remedy-box">
+        <h3>⏳ Recovery Time</h3>
+        <p>{{ remedy.recovery }}</p>
+      </div>
+    </div>
+
+    <p style="margin-top:20px; font-size:14px; opacity:0.8;">
+      <em>For best results, repeat scanning newly affected leaves and monitor field conditions regularly.</em>
+    </p>
+  </div>
 </div>
+{% endif %}
 
+<footer>
+  <p>🌱 AI-Powered Smart Farming | TeaCare AI</p>
+</footer>
+ </div>
 
-
-
+<!-- PARTICLES -->
 <script>
-function openModal(type) {
-
-    const modal = document.getElementById("modal");
-    const title = document.getElementById("modalTitle");
-    const text = document.getElementById("modalText");
-    const img = document.getElementById("modalImg");
-
-    modal.style.display = "flex";
-
-    if (type === "treatment") {
-        title.innerText = "💊 Treatment Details";
-        text.innerHTML = `
-            • Remove infected leaves immediately<br>
-            • Maintain proper irrigation<br>
-            • Apply balanced fertilizers
-        `;
-        img.src = "https://www.agrifarming.in/wp-content/uploads/2020/05/Fungicide-Spray.jpg";
+tsParticles.load("tsparticles", {
+  fullScreen: { enable: true, zIndex: -1 },
+  background: { color: { value: "transparent" } },
+  particles: {
+    number: { value: 90 },
+    color: { value: ["#6CA651", "#BBCB2E", "#839705", "#F2B50B", "#F7F0F0"] },
+    shape: { type: "circle" },
+    opacity: { value: 0.45 },
+    size: { value: { min: 2, max: 5 } },
+    move: { enable: true, speed: 1.15 },
+    links: {
+      enable: true,
+      color: "#BBCB2E",
+      distance: 130,
+      opacity: 0.22
     }
-
-    if (type === "organic") {
-        title.innerText = "🌱 Organic Treatment";
-        text.innerHTML = `
-            • Neem oil spray<br>
-            • Garlic-chili extract<br>
-            • Cow dung compost
-        `;
-        img.src = "https://www.agrifarming.in/wp-content/uploads/2021/06/Organic-Farming.jpg";
+  },
+  interactivity: {
+    events: {
+      onHover: { enable: true, mode: "repulse" }
     }
-
-    if (type === "chemical") {
-        title.innerText = "🧪 Chemical Treatment";
-        text.innerHTML = `
-            • Copper fungicide application<br>
-            • Mancozeb spray<br>
-            • Use only in severe infection cases
-        `;
-        img.src = "https://www.agrifarming.in/wp-content/uploads/2020/05/Fungicide-Spray.jpg";
-    }
-
-    if (type === "recovery") {
-        title.innerText = "⏳ Recovery Measures";
-        text.innerHTML = `
-            • Improve soil drainage<br>
-            • Avoid overwatering<br>
-            • Monitor plant health regularly
-        `;
-        img.src = "https://www.agrifarming.in/wp-content/uploads/2020/06/Plant-Recovery.jpg";
-    }
-}
-
-function closeModal() {
-    document.getElementById("modal").style.display = "none";
-}
-
-// close when clicking outside modal
-window.onclick = function(event) {
-    const modal = document.getElementById("modal");
-    if (event.target == modal) {
-        modal.style.display = "none";
-    }
-}
+  }
+});
 </script>
 
-
+{% if prediction %}
+<script>
+  (function () {
+    const buttons = document.querySelectorAll(".toggle-btn");
+    const panels = document.querySelectorAll(".toggle-panel");
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        buttons.forEach((b) => b.classList.remove("active"));
+        panels.forEach((p) => p.classList.remove("active"));
+        btn.classList.add("active");
+        const panel = document.getElementById(btn.dataset.target);
+        if (panel) panel.classList.add("active");
+      });
+    });
+  })();
+</script>
+{% endif %}
 
 </body>
 </html>
-
-

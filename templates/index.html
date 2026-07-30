@@ -1,30 +1,104 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Tea Leaf Disease Detector</title>
-    <link rel="stylesheet" href="/static/style.css">
+  <meta charset="UTF-8" />
+  <title>TeaCare AI</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <!-- Particle Library -->
+  <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
 </head>
 <body>
 
+<div id="tsparticles"></div>
+<div class="content-shell">
+
+<!-- NAVBAR -->
 <nav class="navbar">
-    <h2>🌿 TeaCare AI</h2>
-    <ul>
-        <li><a href="/">Home</a></li>
-        <li><a href="/predict">Predict</a></li>
-    </ul>
+  <div class="nav-brand">
+    <span class="brand-icon">🌿</span>
+    <div>
+      <h2>TeaCare AI</h2>
+      <p>Smart Tea Crop Intelligence</p>
+    </div>
+  </div>
+  <ul class="nav-links">
+    <li><a href="/">Home</a></li>
+    <li><a href="/predict">Predict</a></li>
+    <li><a href="/weather-page">Weather Insights</a></li>
+  </ul>
+  <a href="/predict" class="nav-cta">Try AI Scan</a>
 </nav>
 
+<!-- HERO -->
 <section class="hero">
-    <h1>Detect Tea Leaf Diseases Instantly</h1>
-    <p>Upload an image and let AI analyze plant health 🌱</p>
-    <a href="/predict" class="btn">Start Prediction</a>
-    <a href="/weather-page" class="btn">🌦️ Check Weather Insights</a>
+  <div>
+    <span class="hero-badge">Professional Plant Health Monitoring</span>
+    <h1>Protect Tea Crops with Precision AI</h1>
+    <p>Detect tea leaf diseases faster, reduce crop loss, and plan timely treatment with modern AI-powered decision support for tea estates.</p>
+    <div style="margin-top: 12px;">
+      <a href="/predict" class="btn">Start Prediction</a>
+      <a href="/weather-page" class="btn">🌦️ Live Weather Insights</a>
+    </div>
+  </div>
+  <div class="hero-visual context-visual hero-context-visual" aria-hidden="true">
+    <span class="orbit-ring orbit-a"></span>
+    <span class="orbit-ring orbit-b"></span>
+    <span class="steam-line steam-1"></span>
+    <span class="steam-line steam-2"></span>
+    <span class="steam-line steam-3"></span>
+    <span class="tea-cup"></span>
+    <span class="tea-surface"></span>
+    <span class="cup-handle"></span>
+    <span class="leaf-outline leaf-left"></span>
+    <span class="leaf-outline leaf-right"></span>
+    <span class="glow-dot dot-1"></span>
+    <span class="glow-dot dot-2"></span>
+    <span class="glow-dot dot-3"></span>
+  </div>
 </section>
 
-
+<!-- FOOTER -->
 <footer>
-    <p>© 2026 TeaCare AI | Built with ❤️</p>
+  <p>© 2026 TeaCare AI | AI-Powered Smart Farming for Tea Gardens</p>
 </footer>
+ </div>
+
+<!-- PARTICLE SCRIPT -->
+<script>
+  tsParticles.load("tsparticles", {
+    fullScreen: { enable: true, zIndex: -1 },
+    background: { color: { value: "transparent" } },
+    particles: {
+      number: { value: 90 },
+      color: { value: ["#6CA651", "#BBCB2E", "#839705", "#F2B50B", "#F7F0F0"] },
+      shape: { type: "circle" },
+      opacity: { value: 0.45 },
+      size: { value: { min: 1, max: 5 } },
+      move: {
+        enable: true,
+        speed: 1.2,
+        direction: "none",
+        outModes: "out"
+      },
+      links: {
+        enable: true,
+        color: "#BBCB2E",
+        distance: 130,
+        opacity: 0.22,
+        width: 1
+      }
+    },
+    interactivity: {
+      events: {
+        onHover: {
+          enable: true,
+          mode: "repulse"
+        }
+      }
+    }
+  });
+</script>
 
 </body>
 </html>

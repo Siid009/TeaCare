@@ -1,286 +1,681 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>TeaCare AI - Smart Farming Dashboard</title>
+  <meta charset="UTF-8" />
+  <title>TeaCare AI - Smart Weather Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
+  <style>
+    .weather-shell { width: min(1200px, 96%); margin: 18px auto 32px; }
+    .weather-hero {
+      display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 18px;
+      background: linear-gradient(135deg, rgba(247,240,240,0.76), rgba(210,223,170,0.82));
+      border: 1px solid rgba(108,166,81,0.28); border-radius: 22px; padding: 24px;
+      backdrop-filter: blur(14px); box-shadow: 0 14px 34px rgba(37, 103, 30, 0.15);
+    }
+    .weather-hero h1 { font-family: "Playfair Display", serif; color: #25671E; margin-bottom: 6px; }
+    .today-chip { display:inline-block; padding:7px 12px; border-radius:999px; background:rgba(72,161,17,0.14); border:1px solid rgba(72,161,17,0.26); font-size:13px; }
+    .today-temp { font-size: 44px; font-weight: 700; color: #25671E; }
+    .today-meta { color:#3c5532; font-size:14px; }
+    .weather-visual { position:relative; min-height:200px; border-radius:18px; background: radial-gradient(circle at 70% 20%, rgba(242,181,11,.24), rgba(108,166,81,.24)); border:1px solid rgba(108,166,81,.35); overflow:hidden; }
+    .weather-ring { position:absolute; border:1.5px solid rgba(37,103,30,.45); border-radius:50%; top:50%; left:50%; transform:translate(-50%,-50%); animation:spinRing 16s linear infinite; }
+    .wr1 { width:180px; height:180px; } .wr2 { width:130px; height:130px; animation-direction:reverse; border-color:rgba(242,181,11,.72);}
+    .weather-sun, .weather-cloud { position:absolute; }
+    .weather-sun { width:58px; height:58px; border:2px solid rgba(242,181,11,.92); border-radius:50%; top:46px; left:86px; box-shadow:0 0 18px rgba(242,181,11,.45); animation:pulseSun 3s ease-in-out infinite; }
+    .weather-cloud { width:96px; height:38px; border:2px solid rgba(37,103,30,.88); border-radius:26px; top:94px; left:116px; background:rgba(247,240,240,.45); }
+    .weather-cloud:before, .weather-cloud:after { content:""; position:absolute; border:2px solid rgba(37,103,30,.88); border-radius:50%; background:rgba(247,240,240,.45);}
+    .weather-cloud:before { width:34px; height:34px; left:14px; top:-20px; }
+    .weather-cloud:after { width:42px; height:42px; left:44px; top:-28px; }
+    .rain-drop { position:absolute; width:2px; height:16px; background:rgba(37,103,30,.75); border-radius:999px; top:138px; animation:rainDrop 1.6s linear infinite;}
+    .d1{left:146px}.d2{left:166px; animation-delay:.4s}.d3{left:186px; animation-delay:.8s}
 
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    .calendar-wrap { margin-top: 20px; }
+    .section-title { font-family:"Playfair Display", serif; color:#25671E; margin-bottom:10px; }
+    .forecast-grid { display:grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap:12px; }
+    .day-card {
+      background: linear-gradient(135deg, rgba(247,240,240,.76), rgba(214,227,184,.8));
+      border:1px solid rgba(108,166,81,.26); border-radius:14px; padding:12px;
+      box-shadow:0 8px 20px rgba(37,103,30,.12);
+      cursor: pointer;
+      transition: transform .25s ease, box-shadow .25s ease;
+    }
+    .day-card:hover { transform: translateY(-4px); box-shadow:0 14px 26px rgba(37,103,30,.2); }
+    .day-name { font-weight:700; color:#25671E; font-size:13px; }
+    .day-temps { font-size:13px; color:#39532f; }
+    .wx-icon { font-size:22px; display:block; margin:6px 0; }
 
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
-        }
-
-        body {
-            background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
-            color: #2e2e2e;
-        }
-
-        /* NAVBAR */
-        .navbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 40px;
-            background: rgba(34, 139, 34, 0.9);
-            color: white;
-            position: sticky;
-            top: 0;
-            backdrop-filter: blur(10px);
-        }
-
-        .navbar ul {
-            display: flex;
-            list-style: none;
-            gap: 20px;
-        }
-
-        .navbar a {
-            color: white;
-            text-decoration: none;
-        }
-
-        /* HERO WEATHER SECTION */
-        .hero-weather {
-            margin: 30px;
-            padding: 30px;
-            border-radius: 20px;
-            background: linear-gradient(135deg, #4facfe, #00f2fe);
-            color: white;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .weather-left h1 {
-            font-size: 34px;
-            margin-bottom: 10px;
-        }
-
-        .weather-left p {
-            font-size: 16px;
-            opacity: 0.9;
-        }
-
-        .weather-box {
-            text-align: right;
-        }
-
-        .temp {
-            font-size: 48px;
-            font-weight: 600;
-        }
-
-        .weather-details {
-            font-size: 16px;
-            margin-top: 5px;
-        }
-
-        /* MAIN LAYOUT */
-        .main-layout {
-            display: flex;
-            padding: 20px 40px;
-            gap: 30px;
-        }
-
-        .left-panel {
-            flex: 2;
-        }
-
-        .right-panel {
-            flex: 1;
-        }
-
-        .page-title {
-            font-size: 26px;
-            margin-bottom: 20px;
-            color: #1b5e20;
-        }
-
-        /* GRID CARDS */
-        .grid-2x2 {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.7);
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-            backdrop-filter: blur(10px);
-            transition: transform 0.3s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-        }
-
-        .card h3 {
-            color: #2e7d32;
-            margin-bottom: 10px;
-        }
-
-        .tea-image {
-            width: 100%;
-            border-radius: 18px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-        }
-
-        footer {
-            text-align: center;
-            padding: 15px;
-            margin-top: 30px;
-            background: #1b5e20;
-            color: white;
-        }
-
-        @media (max-width: 900px) {
-            .main-layout {
-                flex-direction: column;
-            }
-
-            .grid-2x2 {
-                grid-template-columns: 1fr;
-            }
-
-            .hero-weather {
-                flex-direction: column;
-                text-align: center;
-                gap: 15px;
-            }
-
-            .weather-box {
-                text-align: center;
-            }
-        }
-    </style>
+    .dashboard-wrap {
+      margin-top: 22px;
+      background: linear-gradient(165deg, #0f2a0d 0%, #1a4a16 38%, #25671E 100%);
+      border-radius: 22px;
+      padding: 0;
+      overflow: hidden;
+      box-shadow: 0 24px 48px rgba(8, 22, 6, 0.45);
+      color: #f7f0f0;
+    }
+    .dash-head {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 0;
+      align-items: stretch;
+      border-bottom: 1px solid rgba(187, 203, 46, 0.15);
+    }
+    .dash-head-text {
+      padding: 22px 24px 20px;
+    }
+    .dash-head h2 {
+      font-family: "Playfair Display", serif;
+      margin-bottom: 6px;
+      color: #f7f0f0;
+      font-size: 1.45rem;
+      letter-spacing: -0.02em;
+    }
+    .dash-head p { color: rgba(247, 240, 240, 0.78); font-size: 14px; line-height: 1.55; max-width: 42ch; }
+    .dash-visual {
+      position: relative; min-height: 160px;
+      background: radial-gradient(ellipse 80% 70% at 60% 30%, rgba(242,181,11,.22), transparent 55%),
+                    radial-gradient(ellipse 60% 50% at 30% 70%, rgba(108,166,81,.2), transparent 50%);
+      border-left: 1px solid rgba(187, 203, 46, 0.12);
+    }
+    .analytics-strip {
+      padding: 20px 24px 22px;
+      border-bottom: 1px solid rgba(187, 203, 46, 0.12);
+    }
+    .analytics-strip > p.analytics-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: rgba(247, 240, 240, 0.55);
+      margin-bottom: 16px;
+    }
+    .meter-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+    }
+    .meter {
+      text-align: left;
+    }
+    .meter-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .meter-icon {
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+      opacity: 0.95;
+    }
+    .meter-icon svg { width: 100%; height: 100%; }
+    .meter-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #fff9b4;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+    }
+    .meter-unit { font-size: 0.85rem; font-weight: 600; color: rgba(247,240,240,0.55); margin-left: 2px; }
+    .meter-name { font-size: 12px; color: rgba(247,240,240,0.65); margin-top: 4px; }
+    .meter-scale {
+      font-size: 10px;
+      color: rgba(247,240,240,0.38);
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+    .meter-track {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.25);
+      overflow: hidden;
+      position: relative;
+    }
+    .meter-fill {
+      height: 100%;
+      border-radius: inherit;
+      width: 0%;
+      transition: width 0.7s cubic-bezier(0.33, 1, 0.68, 1);
+    }
+    .meter-fill.temp-fill { background: linear-gradient(90deg, #48A111, #F2B50B); }
+    .meter-fill.hum-fill { background: linear-gradient(90deg, #6CA651, #BBCB2E); }
+    .meter-fill.wind-fill { background: linear-gradient(90deg, #839705, #F7F0F0); }
+    .dash-ring, .dash-leaf, .dash-drop {
+      position: absolute;
+      pointer-events: none;
+    }
+    .dash-ring {
+      border: 1.5px solid rgba(247,240,240,.5);
+      border-radius: 50%;
+      left: 50%;
+      top: 52%;
+      transform: translate(-50%, -50%);
+      animation: spinRing 12s linear infinite;
+    }
+    .dr1 { width: 100px; height: 100px; }
+    .dr2 { width: 70px; height: 70px; border-color: rgba(242,181,11,.8); animation-direction: reverse; }
+    .dash-leaf {
+      width: 44px; height: 62px;
+      border: 2px solid rgba(247,240,240,.86);
+      border-radius: 70% 0 70% 0;
+      top: 42%; left: 48%;
+      transform: translate(-50%, -50%) rotate(-18deg);
+      box-shadow: inset 0 0 10px rgba(108,166,81,.45);
+      animation: leafLeftFloat 4.5s ease-in-out infinite;
+    }
+    .dash-drop {
+      width: 2px; height: 13px;
+      background: rgba(247,240,240,.82);
+      border-radius: 999px;
+      top: 70%;
+      animation: rainDrop 1.8s linear infinite;
+    }
+    .dd1 { left: 36%; }
+    .dd2 { left: 44%; animation-delay: .5s; }
+    .dd3 { left: 52%; animation-delay: 1s; }
+    .insights-flow { padding: 0; }
+    .insight-row {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 18px 22px;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid rgba(187, 203, 46, 0.1);
+    }
+    .insight-row:last-child { border-bottom: none; }
+    .insight-art {
+      width: 88px;
+      height: 88px;
+      margin: 0 auto;
+      position: relative;
+      display: grid;
+      place-items: center;
+    }
+    .insight-art .art-emoji { font-size: 2.6rem; line-height: 1; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.35)); }
+    .insight-art .art-ring {
+      position: absolute;
+      inset: 0;
+      border: 2px solid rgba(247,240,240,0.22);
+      border-radius: 22px;
+      animation: spinRing 14s linear infinite;
+    }
+    .insight-art .art-ring.r2 {
+      inset: 8px;
+      border-color: rgba(242,181,11,0.35);
+      animation-direction: reverse;
+      border-radius: 18px;
+    }
+    .insight-body h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff9b4;
+      margin-bottom: 6px;
+      letter-spacing: -0.01em;
+    }
+    .insight-body p {
+      color: rgba(247, 240, 240, 0.88);
+      font-size: 14px;
+      line-height: 1.6;
+      max-width: 62ch;
+    }
+    .viz-row {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 18px 22px;
+      align-items: start;
+      padding: 20px 24px 24px;
+    }
+    .viz-row .insight-art { height: auto; min-height: 88px; }
+    .dual-meters {
+      display: grid;
+      gap: 14px;
+    }
+    .dual-meters .meter-name { margin-top: 0; margin-bottom: 6px; }
+    .safety-inline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px 28px;
+      margin-top: 4px;
+    }
+    .safety-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      min-width: 0;
+    }
+    .safety-item .si-ico { font-size: 1.5rem; line-height: 1.2; }
+    .safety-item .si-text strong { display: block; color: #fff9b4; font-size: 13px; margin-bottom: 2px; }
+    .safety-item .si-text span { font-size: 13px; color: rgba(247,240,240,0.85); line-height: 1.45; }
+    .wind-viz {
+      margin-top: 10px;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.22);
+      overflow: hidden;
+    }
+    .wind-viz span { display:block; height:100%; width:0; background: linear-gradient(90deg, #48A111, #F2B50B); transition: width .5s ease; }
+    .status-note { margin-top: 10px; font-size: 13px; color: rgba(247,240,240,0.78); }
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(20, 45, 16, 0.45);
+      display: none; align-items: center; justify-content: center; z-index: 1200;
+      backdrop-filter: blur(4px);
+    }
+    .modal-backdrop.open { display: flex; }
+    .day-modal {
+      width: min(760px, 92%); max-height: 86vh; overflow: auto;
+      background: linear-gradient(135deg, rgba(247,240,240,.95), rgba(214,227,184,.92));
+      border: 1px solid rgba(108,166,81,.35); border-radius: 20px; padding: 18px;
+      box-shadow: 0 20px 40px rgba(21, 55, 17, 0.35);
+    }
+    .modal-top { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom: 10px; }
+    .modal-top h3 { color:#25671E; font-family:"Playfair Display", serif; }
+    .modal-close {
+      border:none; width:34px; height:34px; border-radius:50%;
+      background:#25671E; color:#F7F0F0; font-size:20px; cursor:pointer;
+    }
+    .modal-grid { display: flex; flex-direction: column; gap: 0; }
+    .modal-row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 12px 16px;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(37, 103, 30, 0.12);
+      align-items: start;
+    }
+    .modal-row:last-of-type { border-bottom: none; }
+    .modal-row h4 { color: #25671E; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; margin: 0; font-weight: 600; }
+    .modal-row p { color: #39532f; font-size: 15px; line-height: 1.5; margin: 0; }
+    .pressure-pill {
+      display:inline-block; margin-top:8px; padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(108,166,81,.35); background: rgba(187,203,46,.24); color:#244016; font-weight:600;
+    }
+    @keyframes pulseSun { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+    @keyframes rainDrop { 0%{transform:translateY(0);opacity:.8} 100%{transform:translateY(26px);opacity:0} }
+    @media (max-width: 980px) {
+      .weather-hero, .dash-head { grid-template-columns:1fr; }
+      .dash-visual { border-left: none; border-top: 1px solid rgba(187, 203, 46, 0.12); }
+      .forecast-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .meter-grid { grid-template-columns: 1fr; gap: 22px; }
+      .insight-row, .viz-row { grid-template-columns: 1fr; text-align: center; }
+      .insight-art { margin: 0 auto; }
+      .insight-body p { margin: 0 auto; }
+      .modal-grid { grid-template-columns:1fr; }
+      .modal-row { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
-
 <body>
-
-<nav class="navbar">
-    <h2>🌿 TeaCare AI</h2>
-    <ul>
-        <li><a href="/">Home</a></li>
-        <li><a href="/predict">Predict</a></li>
+<div id="tsparticles"></div>
+<div class="content-shell">
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="brand-icon">🌿</span>
+      <div><h2>TeaCare AI</h2><p>Smart Tea Crop Intelligence</p></div>
+    </div>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/predict">Predict</a></li>
+      <li><a href="/weather-page">Weather Insights</a></li>
     </ul>
-</nav>
+    <a href="/predict" class="nav-cta">Go to Predict</a>
+  </nav>
 
-<!-- 🌤️ HERO WEATHER SECTION (FOCUS FIRST) -->
-<div class="hero-weather">
-
-    <div class="weather-left">
-        <h1>🌦️ Live Climate Intelligence</h1>
-        <p>Real-time weather insights for smart tea farming decisions ☁️🌱</p>
+  <section class="weather-shell">
+    <div class="weather-hero">
+      <div>
+        <span class="today-chip" id="todayChip">Today's Climate Snapshot</span>
+        <h1>Beautiful 10-Day Weather Calendar</h1>
+        <div class="today-temp" id="heroTemp">--°C</div>
+        <p class="today-meta" id="heroWeather">Detecting weather and preparing forecast...</p>
+        <p class="today-meta" id="location">Locating your farm...</p>
+      </div>
+      <div class="weather-visual">
+        <span class="weather-ring wr1"></span>
+        <span class="weather-ring wr2"></span>
+        <span class="weather-sun"></span>
+        <span class="weather-cloud"></span>
+        <span class="rain-drop d1"></span>
+        <span class="rain-drop d2"></span>
+        <span class="rain-drop d3"></span>
+      </div>
     </div>
 
-    <div class="weather-box">
-        <div class="temp" id="heroTemp">-- ☀️</div>
-        <div class="weather-details" id="heroWeather">
-            🌡️ Loading weather... 🌧️
+    <div class="calendar-wrap">
+      <h2 class="section-title">📅 Next 10 Days Forecast</h2>
+      <div class="forecast-grid" id="forecastGrid"></div>
+    </div>
+
+    <div class="dashboard-wrap">
+      <div class="dash-head">
+        <div class="dash-head-text">
+          <h2>Smart Agro Dashboard</h2>
+          <p>Live field analytics from your location: read the meters, then scan each insight row for what to do next.</p>
         </div>
-    </div>
-
-</div>
-
-<div class="main-layout">
-
-    <!-- LEFT SIDE -->
-    <div class="left-panel">
-
-        <h1 class="page-title">🗺️ Smart Farming Insights Dashboard</h1>
-
-        <div class="grid-2x2">
-
-            <div class="card">
-                <h3>📍 Location</h3>
-                <p id="location">Detecting location...</p>
-            </div>
-
-            <div class="card">
-                <h3>⚠️ Disease Risk</h3>
-                <p id="risk">Analyzing crop health...</p>
-            </div>
-
-            <div class="card">
-                <h3>🌱 Farming Advice</h3>
-                <p id="advice">Generating recommendations...</p>
-            </div>
-
-            <div class="card">
-                <h3>🌿 TeaCare Status</h3>
-                <p>AI monitoring active ✔️</p>
-            </div>
-
+        <div class="dash-visual" aria-hidden="true">
+          <span class="dash-ring dr1"></span>
+          <span class="dash-ring dr2"></span>
+          <span class="dash-leaf"></span>
+          <span class="dash-drop dd1"></span>
+          <span class="dash-drop dd2"></span>
+          <span class="dash-drop dd3"></span>
         </div>
+      </div>
 
+      <div class="analytics-strip">
+        <p class="analytics-label">Live field metrics</p>
+        <div class="meter-grid">
+          <div class="meter">
+            <div class="meter-top">
+              <div class="meter-icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M24 4v32" stroke="#F2B50B" stroke-width="3" stroke-linecap="round"/>
+                  <circle cx="24" cy="40" r="5" stroke="#F7F0F0" stroke-width="2.5"/>
+                  <path d="M18 14c0-3.3 2.7-6 6-6s6 2.7 6 6c0 4-6 10-6 10s-6-6-6-10z" stroke="#48A111" stroke-width="2" fill="rgba(108,166,81,0.25)"/>
+                </svg>
+              </div>
+              <div>
+                <div><span class="meter-value" id="kpiTemp">--</span><span class="meter-unit">°C</span></div>
+                <div class="meter-name">Air temperature</div>
+              </div>
+            </div>
+            <div class="meter-track"><div class="meter-fill temp-fill" id="tempMeterFill"></div></div>
+            <div class="meter-scale"><span>-5°C</span><span>Comfort band</span><span>45°C</span></div>
+          </div>
+          <div class="meter">
+            <div class="meter-top">
+              <div class="meter-icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M14 28c0-5.5 4.5-10 10-10 4.2 0 7.8 2.6 9.2 6.3" stroke="#BBCB2E" stroke-width="2.5" stroke-linecap="round"/>
+                  <path d="M28 18c5 0 9 4 9 9 0 1.2-.2 2.4-.7 3.5" stroke="#6CA651" stroke-width="2" stroke-linecap="round"/>
+                  <ellipse cx="22" cy="34" rx="3" ry="4" fill="rgba(187,203,46,0.5)"/>
+                </svg>
+              </div>
+              <div>
+                <div><span class="meter-value" id="kpiHumidity">--</span><span class="meter-unit">%</span></div>
+                <div class="meter-name">Relative humidity</div>
+              </div>
+            </div>
+            <div class="meter-track"><div class="meter-fill hum-fill" id="humMeterFill"></div></div>
+            <div class="meter-scale"><span>0%</span><span>Field risk rises</span><span>100%</span></div>
+          </div>
+          <div class="meter">
+            <div class="meter-top">
+              <div class="meter-icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8 28h32M12 22l-4 6h32l-4-6" stroke="#F7F0F0" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M14 18c8-10 20-10 28 0" stroke="#F2B50B" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+                  <circle cx="36" cy="12" r="3" stroke="#48A111" stroke-width="1.5"/>
+                </svg>
+              </div>
+              <div>
+                <div><span class="meter-value" id="kpiWind">--</span><span class="meter-unit">km/h</span></div>
+                <div class="meter-name">Wind at 10 m</div>
+              </div>
+            </div>
+            <div class="meter-track"><div class="meter-fill wind-fill" id="windMeterFill"></div></div>
+            <div class="meter-scale"><span>Calm</span><span>Spray window</span><span>40+</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="insights-flow">
+        <div class="insight-row">
+          <div class="insight-art"><span class="art-ring"></span><span class="art-ring r2"></span><span class="art-emoji" role="img" aria-label="">🌱</span></div>
+          <div class="insight-body">
+            <h3>Crop impact analysis</h3>
+            <p id="cropImpact">Preparing crop response analysis...</p>
+          </div>
+        </div>
+        <div class="insight-row">
+          <div class="insight-art"><span class="art-ring"></span><span class="art-ring r2"></span><span class="art-emoji" role="img" aria-label="">⚠️</span></div>
+          <div class="insight-body">
+            <h3>Disease risk prediction</h3>
+            <p id="risk">Evaluating fungal and stress disease probability...</p>
+          </div>
+        </div>
+        <div class="insight-row">
+          <div class="insight-art"><span class="art-ring"></span><span class="art-ring r2"></span><span class="art-emoji" role="img" aria-label="">💧</span></div>
+          <div class="insight-body">
+            <h3>Smart irrigation suggestion</h3>
+            <p id="irrigation">Generating irrigation recommendation...</p>
+          </div>
+        </div>
+        <div class="insight-row">
+          <div class="insight-art"><span class="art-ring"></span><span class="art-ring r2"></span><span class="art-emoji" role="img" aria-label="">🌧️</span></div>
+          <div class="insight-body">
+            <h3>Rain alert system</h3>
+            <p id="rainAlert">Checking rain alert from current and forecast trends...</p>
+          </div>
+        </div>
+        <div class="viz-row">
+          <div class="insight-art"><span class="art-ring"></span><span class="art-ring r2"></span><span class="art-emoji" role="img" aria-label="">📊</span></div>
+          <div class="insight-body">
+            <h3>Wind + humidity load</h3>
+            <p class="meter-name" style="margin-bottom:8px;">Combined drift + moisture pressure on tea canopy</p>
+            <div class="dual-meters">
+              <div>
+                <div class="meter-name">Wind intensity (spray drift)</div>
+                <div class="wind-viz"><span id="windBar"></span></div>
+              </div>
+              <div>
+                <div class="meter-name">Humidity envelope</div>
+                <div class="meter-track"><div class="meter-fill hum-fill" id="humVizFill"></div></div>
+              </div>
+            </div>
+            <p class="status-note" id="windHumid">Processing wind and humidity...</p>
+          </div>
+        </div>
+        <div class="insight-row" style="padding-bottom: 26px;">
+          <div class="insight-art"><span class="art-ring"></span><span class="art-ring r2"></span><span class="art-emoji" role="img" aria-label="">🛡️</span></div>
+          <div class="insight-body">
+            <h3>Field safety indicators</h3>
+            <div class="safety-inline">
+              <div class="safety-item">
+                <span class="si-ico" aria-hidden="true">🌬️</span>
+                <div class="si-text"><strong>Wind → spray safety</strong><span id="spraySafety">Checking...</span></div>
+              </div>
+              <div class="safety-item">
+                <span class="si-ico" aria-hidden="true">💧</span>
+                <div class="si-text"><strong>Humidity → disease risk</strong><span id="humidityRisk">Checking...</span></div>
+              </div>
+              <div class="safety-item">
+                <span class="si-ico" aria-hidden="true">☀️</span>
+                <div class="si-text"><strong>UV → leaf burn risk</strong><span id="uvRisk">Checking...</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+  </section>
 
-    <!-- RIGHT SIDE -->
-    <div class="right-panel">
-        <img src="https://www.nativeplanet.com/img/2013/08/27-assam1.jpg" class="tea-image">
-    </div>
-
+  <footer><p>🌱 AI Powered Smart Farming | TeaCare AI</p></footer>
 </div>
-
-<footer>
-    <p>🌱 AI Powered Smart Farming | TeaCare AI</p>
-</footer>
+<div class="modal-backdrop" id="dayModalBackdrop" aria-hidden="true">
+  <div class="day-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-top">
+      <h3 id="modalTitle">Day Forecast Detail</h3>
+      <button class="modal-close" id="modalCloseBtn" aria-label="Close">×</button>
+    </div>
+    <div class="modal-grid">
+      <div class="modal-row"><h4>Weather</h4><p id="mCondition">-</p></div>
+      <div class="modal-row"><h4>Temperature</h4><p id="mTemp">-</p></div>
+      <div class="modal-row"><h4>Rain window</h4><p id="mRainWindow">-</p></div>
+      <div class="modal-row"><h4>Spray window</h4><p id="mSprayWindow">-</p></div>
+      <div class="modal-row"><h4>Wind / humidity / UV</h4><p id="mMetrics">-</p></div>
+      <div class="modal-row">
+        <h4>Disease pressure</h4>
+        <p><span id="mPressure">-</span> <span class="pressure-pill" id="mPressureLabel">-</span></p>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
-if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(function(position) {
+  let latestForecast = [];
+  tsParticles.load("tsparticles", {
+    fullScreen: { enable: true, zIndex: -1 },
+    background: { color: { value: "transparent" } },
+    particles: {
+      number: { value: 95 },
+      color: { value: ["#6CA651", "#BBCB2E", "#839705", "#F2B50B", "#F7F0F0"] },
+      shape: { type: "circle" },
+      opacity: { value: 0.42 },
+      size: { value: { min: 1, max: 4 } },
+      move: { enable: true, speed: 1.1 },
+      links: { enable: true, color: "#BBCB2E", distance: 120, opacity: 0.2 }
+    }
+  });
 
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
+  const iconFromCode = (code) => {
+    if ([0].includes(code)) return "☀️";
+    if ([1,2].includes(code)) return "🌤️";
+    if ([3,45,48].includes(code)) return "☁️";
+    if ([51,53,55,61,63,65,80,81,82].includes(code)) return "🌧️";
+    if ([95,96,99].includes(code)) return "⛈️";
+    if ([71,73,75].includes(code)) return "❄️";
+    return "🌿";
+  };
 
-        document.getElementById("location").innerText =
-            `Latitude: ${lat.toFixed(2)}, Longitude: ${lon.toFixed(2)}`;
+  const shortDay = (isoDate) => {
+    const d = new Date(isoDate + "T00:00:00");
+    return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  };
 
-        fetch("/weather", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ lat: lat, lon: lon })
-        })
-        .then(res => res.json())
-        .then(data => {
-
-            // HERO WEATHER UPDATE
-            document.getElementById("heroTemp").innerText =
-                `${data.temp}°C ${getWeatherIcon(data.condition)}`;
-
-            document.getElementById("heroWeather").innerText =
-                `${data.condition} | 💧 Humidity: ${data.humidity}`;
-
-            // CARDS
-            document.getElementById("risk").innerText = data.risk;
-            document.getElementById("advice").innerText = data.advice;
-
-        });
-
+  function renderForecast(forecast) {
+    latestForecast = forecast || [];
+    const grid = document.getElementById("forecastGrid");
+    grid.innerHTML = "";
+    forecast.forEach((day, idx) => {
+      const card = document.createElement("div");
+      card.className = "day-card";
+      card.setAttribute("tabindex", "0");
+      card.dataset.index = String(idx);
+      card.innerHTML = `
+        <div class="day-name">${idx === 0 ? "Today" : shortDay(day.date)}</div>
+        <span class="wx-icon">${iconFromCode(day.weather_code)}</span>
+        <div class="day-temps">${day.temp_max}° / ${day.temp_min}°</div>
+        <div class="day-temps">Rain: ${day.rain_probability}%</div>
+      `;
+      card.addEventListener("click", () => openDayModal(idx));
+      card.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openDayModal(idx);
+        }
+      });
+      grid.appendChild(card);
     });
-}
+  }
 
-// simple weather icon logic
-function getWeatherIcon(condition) {
-    condition = condition.toLowerCase();
+  function diseasePressure(day) {
+    const rain = Number(day.rain_probability || 0);
+    const humidity = Number(day.humidity || 0);
+    const uv = Number(day.uv || 0);
+    const tempMean = (Number(day.temp_max || 0) + Number(day.temp_min || 0)) / 2;
+    let score = 0;
+    score += rain * 0.35;
+    score += humidity * 0.35;
+    score += Math.max(0, 30 - Math.abs(tempMean - 24) * 2) * 0.2;
+    score += Math.max(0, 8 - uv) * 2 * 0.1;
+    score = Math.max(0, Math.min(100, Math.round(score)));
+    return score;
+  }
 
-    if (condition.includes("rain")) return "🌧️";
-    if (condition.includes("cloud")) return "☁️";
-    if (condition.includes("sun")) return "☀️";
-    if (condition.includes("storm")) return "⛈️";
+  function openDayModal(index) {
+    const day = latestForecast[index];
+    if (!day) return;
+    const pressure = diseasePressure(day);
+    const rainWindow = day.rain_probability >= 60
+      ? "Likely wet periods. Prioritize drainage and avoid foliar spray."
+      : "No major rain block expected. Watch for local cloud bursts.";
+    const sprayWindow = (day.wind <= 18 && day.rain_probability < 45)
+      ? "Safer spray window: early morning (6:00-9:00 AM)."
+      : "Spray caution: wind/rain may reduce spray efficiency.";
+    const label = pressure >= 70 ? "High Disease Pressure" : pressure >= 45 ? "Moderate Disease Pressure" : "Low Disease Pressure";
 
-    return "🌤️";
-}
+    document.getElementById("modalTitle").innerText = `${shortDay(day.date)} - Detailed Farm Outlook`;
+    document.getElementById("mCondition").innerText = `${iconFromCode(day.weather_code)} ${day.condition}`;
+    document.getElementById("mTemp").innerText = `${day.temp_max}°C max / ${day.temp_min}°C min`;
+    document.getElementById("mRainWindow").innerText = rainWindow;
+    document.getElementById("mSprayWindow").innerText = sprayWindow;
+    document.getElementById("mMetrics").innerText = `Wind ${day.wind} km/h | Humidity ${day.humidity}% | UV ${day.uv}`;
+    document.getElementById("mPressure").innerText = `${pressure}/100`;
+    document.getElementById("mPressureLabel").innerText = label;
+    document.getElementById("dayModalBackdrop").classList.add("open");
+    document.getElementById("dayModalBackdrop").setAttribute("aria-hidden", "false");
+  }
+
+  function closeDayModal() {
+    const backdrop = document.getElementById("dayModalBackdrop");
+    backdrop.classList.remove("open");
+    backdrop.setAttribute("aria-hidden", "true");
+  }
+
+  document.getElementById("modalCloseBtn").addEventListener("click", closeDayModal);
+  document.getElementById("dayModalBackdrop").addEventListener("click", (e) => {
+    if (e.target.id === "dayModalBackdrop") closeDayModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeDayModal();
+  });
+
+  function loadWeather(lat, lon) {
+    fetch("/weather", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lat, lon })
+    })
+    .then((res) => res.json())
+    .then((data) => {
+      const t = Number(data.temp);
+      const h = Number(data.humidity);
+      const w = Number(data.wind);
+      document.getElementById("heroTemp").innerText = `${data.temp}°C ${iconFromCode((data.forecast[0] || {}).weather_code || 0)}`;
+      document.getElementById("heroWeather").innerText = `${data.condition} | Humidity: ${data.humidity}% | Wind: ${data.wind} km/h | UV: ${data.uv}`;
+      document.getElementById("kpiTemp").innerText = Number.isFinite(t) ? t.toFixed(1) : "--";
+      document.getElementById("kpiHumidity").innerText = Number.isFinite(h) ? String(Math.round(h)) : "--";
+      document.getElementById("kpiWind").innerText = Number.isFinite(w) ? w.toFixed(1) : "--";
+      const tempPct = Number.isFinite(t) ? Math.min(100, Math.max(0, ((t + 5) / 50) * 100)) : 0;
+      const humPct = Number.isFinite(h) ? Math.min(100, Math.max(0, h)) : 0;
+      const windPct = Number.isFinite(w) ? Math.min(100, Math.max(0, (w / 40) * 100)) : 0;
+      document.getElementById("tempMeterFill").style.width = `${tempPct}%`;
+      document.getElementById("humMeterFill").style.width = `${humPct}%`;
+      document.getElementById("windMeterFill").style.width = `${windPct}%`;
+      document.getElementById("humVizFill").style.width = `${humPct}%`;
+      document.getElementById("cropImpact").innerText = data.crop_impact;
+      document.getElementById("risk").innerText = `${data.risk} (${data.disease_risk})`;
+      document.getElementById("irrigation").innerText = data.irrigation;
+      document.getElementById("rainAlert").innerText = data.rain_alert;
+      document.getElementById("spraySafety").innerText = data.spray_safety;
+      document.getElementById("humidityRisk").innerText = `${data.humidity}% humidity -> ${data.disease_risk} disease risk`;
+      document.getElementById("uvRisk").innerText = data.uv_risk;
+      document.getElementById("windHumid").innerText = `Wind ${data.wind} km/h and humidity ${data.humidity}% influence spray quality and fungal pressure.`;
+      document.getElementById("windBar").style.width = `${windPct}%`;
+      renderForecast(data.forecast || []);
+    })
+    .catch(() => {
+      document.getElementById("heroWeather").innerText = "Unable to fetch weather data right now.";
+    });
+  }
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+      document.getElementById("location").innerText = `Farm Location: ${lat.toFixed(2)}, ${lon.toFixed(2)}`;
+      loadWeather(lat, lon);
+    }, () => {
+      document.getElementById("location").innerText = "Location access denied. Using default location.";
+      loadWeather(26.7286, 88.3953);
+    });
+  } else {
+    document.getElementById("location").innerText = "Geolocation not supported. Using default location.";
+    loadWeather(26.7286, 88.3953);
+  }
 </script>
-
 </body>
 </html>
